@@ -1,0 +1,1293 @@
+<!-- PAGINA 3 -->
+ <!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Módulo de inferencia basada en evidencia</title>
+  
+  <!-- Fuentes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#06004c',
+            plum: '#5e0047',
+            magenta: '#c2005d',
+            wine: '#8a0004',
+            paper: '#ffffff',
+          },
+          fontFamily: {
+            sans: ['Roboto', 'sans-serif'],
+            heading: ['Fredoka', 'sans-serif'], 
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- LIBRERÍAS EXTERNAS: Gráficas, Iconos y Fórmulas Matemáticas -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+      startup: { pageReady: () => { return MathJax.startup.defaultPageReady(); } }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <!-- CSS INTERNO: SPA, Simuladores y Modales -->
+  <style>
+    /* SPA & Menú */
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+    .view-section[aria-hidden="true"] { pointer-events: none; }
+    .side-overlay.is-visible { visibility: visible; opacity: 1; }
+    .side-menu { transform: translateX(-105%); }
+    .side-menu.is-open { transform: translateX(0); }
+    
+    .hamburger, .hamburger::before, .hamburger::after { display: block; width: 19px; height: 2px; border-radius: 4px; background: currentColor; transition: all 0.2s ease-in-out; }
+    .hamburger { position: relative; }
+    .hamburger::before { content: ""; position: absolute; top: -6px; }
+    .hamburger::after { content: ""; position: absolute; top: 6px; }
+    .menu-toggle.is-open .hamburger { background: transparent; }
+    .menu-toggle.is-open .hamburger::before { transform: translateY(6px) rotate(45deg); }
+    .menu-toggle.is-open .hamburger::after { transform: translateY(-6px) rotate(-45deg); }
+
+    /* Burbujas y tablas */
+    .speech-bubble::after { content: ""; position: absolute; bottom: -12px; right: 25%; width: 22px; height: 22px; border-right: 4px solid #000000; border-bottom: 4px solid #000000; background: #ffffff; transform: rotate(45deg); }
+    .tabla-conector::before { content: ""; position: absolute; z-index: 2; top: 50%; left: -7px; width: 7px; height: 2px; background: #c2005d; transform: translateY(-50%); }
+    @media (max-width: 760px) { .tabla-conector::before { display: none; } }
+
+    /* Animaciones y estilos del Slider (Cohen) */
+    .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    
+    input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; background: transparent; }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none; height: 20px; width: 20px;
+      border-radius: 50%; background: #2563eb; cursor: pointer;
+      margin-top: -6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 8px; cursor: pointer; background: #cbd5e1; border-radius: 4px; }
+    .curves-container { position: relative; width: 100%; height: 170px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; background: #ffffff; border-bottom: 2px solid #cbd5e1; }
+    .values-table th, .values-table td { border: 1px solid #e2e8f0; padding: 0.35rem 0.5rem; text-align: left; }
+    .values-table th { background-color: #f8fafc; font-weight: 600; color: #334155; }
+  </style>
+</head>
+
+<body class="bg-paper text-ink font-sans w-full min-w-0 m-0 overflow-x-hidden scroll-smooth">
+  
+  <!-- HEADER -->
+  <header class="fixed z-50 top-0 left-0 w-full h-[68px] bg-white shadow-[0_1px_0_rgba(6,0,76,0.1)]">
+    <button id="menu-toggle" class="menu-toggle fixed z-[70] top-[10px] left-[18px] md:left-[32px] grid w-[42px] h-[42px] place-items-center border-0 rounded-full bg-white text-ink shadow-lg cursor-pointer focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-magenta focus-visible:outline-offset-4" type="button" aria-label="Abrir menú de navegación" aria-expanded="false" aria-controls="side-menu"> 
+      <span class="hamburger" aria-hidden="true"></span> 
+    </button>
+    <div class="flex items-center h-[64px] px-[18px] pl-[78px] md:pl-[92px]">
+      <h1 class="text-ink font-black text-[22px]">Unidad III - Fundamentos de inferencia</h1>
+    </div>
+    <div class="absolute right-0 bottom-0 left-0 h-1 bg-ink/10 overflow-hidden" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div id="progress-fill" class="h-full bg-magenta transition-all duration-150 ease-out w-0"></div>
+    </div>
+  </header>
+
+  <!-- OVERLAY Y MENÚ LATERAL -->
+  <div id="side-overlay" class="side-overlay fixed z-[55] inset-0 bg-ink/40 opacity-0 invisible transition-all duration-200" aria-hidden="true"></div>
+  <aside id="side-menu" class="side-menu fixed z-[60] top-0 bottom-0 left-0 w-[min(350px,86vw)] pt-[98px] px-[25px] pb-[30px] bg-white shadow-[14px_0_38px_rgba(6,0,76,0.2)] transition-transform duration-300 ease-out" aria-label="Navegación del módulo">
+    <nav role="tablist" aria-label="Vistas del módulo" class="grid gap-2">
+      <a role="tab" data-view-target="punto-tamano-efecto" aria-controls="punto-tamano-efecto" aria-selected="false" href="#punto-tamano-efecto" class="px-3 py-3 rounded-xl text-ink font-bold leading-snug no-underline hover:bg-magenta/10 hover:text-magenta aria-selected:bg-magenta/10 aria-selected:text-magenta transition-colors">¿Cuál es el punto del tamaño del efecto?</a>
+      <a role="tab" data-view-target="punto-partida" aria-controls="punto-partida" aria-selected="false" href="#punto-partida" class="px-3 py-3 rounded-xl text-ink font-bold leading-snug no-underline hover:bg-magenta/10 hover:text-magenta aria-selected:bg-magenta/10 aria-selected:text-magenta transition-colors">Punto de partida</a>
+      <a role="tab" data-view-target="decision-final" aria-controls="decision-final" aria-selected="false" href="#decision-final" class="px-3 py-3 rounded-xl text-ink font-bold leading-snug no-underline hover:bg-magenta/10 hover:text-magenta aria-selected:bg-magenta/10 aria-selected:text-magenta transition-colors">¿Qué es el tamaño del efecto?</a>
+      <a role="tab" data-view-target="aplicacion" aria-controls="aplicacion" aria-selected="false" href="#aplicacion" class="px-3 py-3 rounded-xl text-ink font-bold leading-snug no-underline hover:bg-magenta/10 hover:text-magenta aria-selected:bg-magenta/10 aria-selected:text-magenta transition-colors">Vamos al punto</a>
+      <a role="tab" data-view-target="integracion" aria-controls="integracion" aria-selected="false" href="#integracion" class="px-3 py-3 rounded-xl text-ink font-bold leading-snug no-underline hover:bg-magenta/10 hover:text-magenta aria-selected:bg-magenta/10 aria-selected:text-magenta transition-colors">Integremos los puntos</a>
+    </nav>
+  </aside>
+
+  <!-- CONTENEDOR PRINCIPAL -->
+  <main class="w-full min-h-screen overflow-hidden">
+
+    <!-- SECCIÓN: INICIO (HERO) -->
+    <section id="inicio" data-view="inicio" class="view-section active pt-[68px] bg-[#263146]" role="tabpanel" aria-hidden="false" aria-label="Inicio">
+      <div class="w-full flex flex-col items-center justify-center py-8 px-4">
+        <div class="w-full flex justify-center">
+          <img src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Copia%20de%20Propuesta%20(2).png?raw=true" alt="Portada Fundamentos de Inferencia" class="w-full max-w-5xl h-auto rounded-lg shadow-xl">
+        </div>
+        <div class="mt-6 flex items-center gap-2 bg-white/10 backdrop-blur-md px-5 py-2.5 rounded-full text-white text-xs font-bold sm:hidden border border-white/20 shadow-md">
+          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+          <span>Gira tu celular en horizontal para mejor experiencia</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN: MISIÓN 04 -->
+    <section id="punto-tamano-efecto" class="view-section w-full min-h-screen pt-[104px] pb-[44px] px-5 bg-white" data-view="punto-tamano-efecto" role="tabpanel" aria-hidden="true" aria-labelledby="effect-title">
+      <div class="w-[min(1150px,100%)] mx-auto">
+        <h2 id="effect-title" class="sr-only">¿Cuál es el punto del tamaño del efecto?</h2>
+        <div class="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-8 max-w-[1000px] mx-auto mb-16">
+          <img src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Punto-e.png?raw=true" alt="Cara de preocupación" class="w-32 md:w-48 h-auto object-contain shrink-0">
+          <div class="text-black font-bold text-[16px] md:text-[18px] leading-relaxed pt-2">
+            <p>Mañana, Sofía, una psicóloga con experiencia en intervenciones virtuales para reducir el estrés, tendrá que recomendar al comité directivo de un hospital una intervención basada en realidad virtual para el personal de salud. Parece una tarea sencilla... pero hay un detalle que complica la decisión: el hospital solo tiene presupuesto para implementar una de las dos intervenciones disponibles.</p>
+            <p class="mt-5 font-black">¿Cuál debería escoger?</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch max-w-[1100px] mx-auto">
+          <article class="p-6 md:p-8 border-[5px] border-plum rounded-[35px] bg-white h-full flex flex-col shadow-sm">
+            <h3 class="mb-5 text-ink font-heading font-black text-3xl md:text-4xl text-center uppercase">Estudio 1</h3>
+            <ul class="grid gap-3 pl-5 text-black font-medium text-[15px] md:text-[16px] leading-relaxed list-disc">
+              <li>Participantes: 54 trabajadores sector salud.</li>
+              <li>Evaluación antes y después de una sesión de realidad virtual.</li>
+              <li>Sesión de 10 minutos de relajación.</li>
+              <li>Estrés antes: M = 1.15 (DE = 0.80)</li>
+              <li>Estrés después: M = 1.01 (DE = 0.72)</li>
+              <li>Valor p = .018</li>
+            </ul>
+          </article>
+          
+          <article class="p-6 md:p-8 border-[5px] border-ink rounded-[35px] bg-white h-full flex flex-col shadow-sm">
+            <h3 class="mb-5 text-ink font-heading font-black text-3xl md:text-4xl text-center uppercase">Estudio 2</h3>
+            <ul class="grid gap-3 pl-5 text-black font-medium text-[15px] md:text-[16px] leading-relaxed list-disc">
+              <li>Participantes: 86 enfermeras.</li>
+              <li>Evaluación antes y después de una sesión de realidad virtual.</li>
+              <li>App móvil en conjunto con ejercicios de relajación.</li>
+              <li>Estrés antes: M = 35.2 (DE = 24.3)</li>
+              <li>Estrés después: M = 21.1 (DE = 21.1)</li>
+              <li>Valor p &lt; .005</li>
+            </ul>
+          </article>
+          
+          <aside class="flex flex-col items-center justify-end relative h-full mt-10 md:mt-0" aria-label="Reflexión de Sofía">
+            <div class="speech-bubble relative z-10 mb-[-15px] p-5 border-[4px] border-black rounded-[30px] bg-white text-black text-[14px] font-medium text-center shadow-md w-full max-w-[320px]">
+              Encontré dos investigaciones y ambas son estadísticamente significativas. El problema es que solo puedo implementar una intervención.
+            </div>
+            <img class="w-[220px] md:w-[320px] h-auto object-contain relative z-0" loading="lazy" alt="Sofía pensativa" src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Sofia%20pensativa-e%20(1).png?raw=true">
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓN: PUNTO DE PARTIDA -->
+    <section id="punto-partida" data-view="punto-partida" class="view-section bg-white pb-0" role="region" hidden aria-hidden="true" aria-labelledby="partida-title">
+      <div class="w-[min(1050px,100%)] mx-auto pt-[94px] px-5">
+        <header class="flex items-center gap-4 max-w-[900px] mx-auto mb-10">
+          <img class="w-[70px] h-[70px] object-contain shrink-0 mix-blend-multiply" loading="lazy" alt="Icono personaje" src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Punto%20de%20partida-bueno.png?raw=true">
+          <div>
+            <p class="mb-1 text-magenta font-black text-xs tracking-widest uppercase">PUNTO DE PARTIDA...</p>
+            <h2 id="partida-title" class="m-0 text-ink font-heading font-black text-3xl md:text-5xl leading-tight">¿Recuerdas cómo funciona una prueba de hipótesis?</h2>
+          </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] items-center gap-8 max-w-[1000px] mx-auto mb-12">
+          <aside class="flex flex-col items-center">
+            <div class="relative p-4 border-[3px] border-ink rounded-xl bg-white text-ink text-sm md:text-[15px] font-bold text-center shadow-sm w-full">
+              Cuando analizamos una investigación, siempre partimos de dos posibles explicaciones.
+              <div class="absolute -bottom-[10px] right-10 w-5 h-5 border-b-[3px] border-r-[3px] border-ink bg-white transform rotate-45"></div>
+            </div>
+            <img class="w-[180px] md:w-[200px] mt-4 object-contain rounded-t-full mix-blend-multiply" loading="lazy" alt="Sofía" src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Sofia%20cuaderno.png?raw=true">
+          </aside>
+          
+          <div class="grid grid-cols-[1fr_1.5fr_1.5fr] gap-2 text-center text-[10px] md:text-xs font-black tracking-wide">
+            <div class="bg-gray-200 text-ink py-3 px-2 flex items-center justify-center">HIPÓTESIS</div>
+            <div class="bg-magenta text-white py-3 px-2 flex items-center justify-center">¿QUÉ PLANTEA?</div>
+            <div class="bg-[#d44c88] text-white py-3 px-2 flex items-center justify-center">EN EL CASO DE SOFÍA</div>
+            
+            <div class="bg-gray-100 border border-gray-300 py-4 px-2 flex items-center justify-center">HIPÓTESIS NULA (H0)</div>
+            <div class="border border-magenta py-4 px-2 flex items-center justify-center font-bold text-ink">No existe un efecto o diferencia real.</div>
+            <div class="border border-magenta py-4 px-2 flex items-center justify-center font-bold text-ink text-left">Los ejercicios de relajación acompañados con la realidad virtual no reducen el estrés del personal sanitario.</div>
+            
+            <div class="bg-gray-100 border border-gray-300 py-4 px-2 flex items-center justify-center">HIPÓTESIS ALTERNATIVA (H1)</div>
+            <div class="border border-magenta py-4 px-2 flex items-center justify-center font-bold text-ink">Sí existe un efecto o diferencia real.</div>
+            <div class="border border-magenta py-4 px-2 flex items-center justify-center font-bold text-ink text-left">Los ejercicios de relajación acompañados con la realidad virtual si reducen el estrés del personal sanitario.</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4 max-w-[850px] mx-auto mb-10">
+          <img class="w-12 h-12 md:w-14 md:h-14 object-contain mix-blend-multiply shrink-0" loading="lazy" alt="Icono foco" src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Foco-circulo.png?raw=true">
+          <p class="text-ink text-sm md:text-base m-0 text-justify">Es importante recordar que buscamos diferencias que sean estadísticamente significativas utilizando los siguientes criterios(<strong>Da Click en los cuadros rojos</strong>):</p>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-6 max-w-[800px] mx-auto mb-10">
+          <button onclick="abrirModal('significancia')" class="bg-plum hover:bg-wine text-white font-black text-sm md:text-base rounded-full py-5 px-8 md:px-12 shadow-lg transition-transform hover:scale-105 focus:outline-none">Nivel de significancia (α)</button>
+          <button onclick="abrirModal('valor-p')" class="bg-plum hover:bg-wine text-white font-black text-sm md:text-base rounded-full py-5 px-8 md:px-12 shadow-lg transition-transform hover:scale-105 focus:outline-none">El valor p</button>
+        </div>
+
+        <div class="max-w-[900px] mx-auto mb-12">
+          <p class="text-ink text-sm md:text-base leading-relaxed text-justify">
+            Recuerda que si <strong>el valor p es menor al nivel de significancia establecido (α= .05)</strong>, se rechaza la hipótesis nula, por lo que el resultado es estadísticamente significativa. 
+          </p>
+        </div>
+
+        <article class="relative max-w-[900px] mx-auto mb-12 mt-20 pt-8 px-3 md:px-10 pb-8 border-[3px] border-[#b0105b] rounded-[24px] bg-white shadow-md">
+          <div class="absolute -top-14 left-4 z-10 pointer-events-none">
+          </div>
+         <!-- NUEVO TÍTULO INTEGRADO -->
+            <h3 class="text-[#b0105b] font-heading font-black text-xl md:text-2xl mb-3 mt-0">
+              Lo que sabe Sofía hasta el momento es...
+            </h3>
+          <div class="relative z-10">
+            <ul class="grid gap-3 m-0 pl-5 list-disc text-ink text-sm md:text-[15px] font-normal leading-relaxed text-justify">
+              <li>El primer estudio reportó un valor p = .018, mientras que el segundo obtuvo un valor p &lt; .005.</li>
+              <li>Ambos números son menores a .05, por lo que ambas intervenciones redujeron el estrés de forma estadísticamente significativa.</li>
+            </ul>
+            <p class="mt-4 text-ink text-sm md:text-[15px] font-normal leading-relaxed text-justify">
+              Sin embargo, el valor p del segundo estudio fue más pequeño, por lo que ¿se podría afirmar que la intervención del segundo estudio funciona mejor? 
+            </p>
+          </div>
+        </article>
+
+        <div class="max-w-[900px] mx-auto mb-10">
+          <p class="text-ink text-sm md:text-base leading-relaxed text-justify">
+            En la práctica, es común encontrar interpretaciones que van más allá de lo que realmente informa el <i>valor p</i>. Aunque, en general, <strong>cuanto más se aleja el <i>valor p</i> de .05 hacia valores más pequeños</strong>, la probabilidad de que el resultado sea producto del azar disminuye. Esto <strong>no significa que el efecto encontrado sea automáticamente más grande, importante o útil, más bien</strong> se debe a que el valor p depende de distintos factores, entre ellos (Da click a los cuadros rojos para conocerlos):
+          </p>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-6 max-w-[900px] mx-auto mb-16">
+          <button onclick="abrirModal('evento')" class="bg-plum hover:bg-wine text-white font-black text-sm rounded-3xl py-6 px-6 shadow-lg transition-transform hover:scale-105 flex-1 min-w-[200px] max-w-[250px] focus:outline-none">¿Qué tan claro es<br>el efecto?</button>
+          <button onclick="abrirModal('error')" class="bg-plum hover:bg-wine text-white font-black text-sm rounded-3xl py-6 px-6 shadow-lg transition-transform hover:scale-105 flex-1 min-w-[200px] max-w-[250px] focus:outline-none">El error estándar</button>
+          <button onclick="abrirModal('muestra')" class="bg-plum hover:bg-wine text-white font-black text-sm rounded-3xl py-6 px-6 shadow-lg transition-transform hover:scale-105 flex-1 min-w-[200px] max-w-[250px] focus:outline-none">Tamaño de<br>la muestra</button>
+        </div>
+
+        <section class="max-w-[900px] mx-auto pb-16" aria-labelledby="partida-conclusion-titulo">
+          <h3 id="partida-conclusion-titulo" class="text-ink font-heading font-black text-3xl md:text-4xl leading-none mb-6">¿Qué podemos concluir?</h3>
+          <div class="grid grid-cols-[120px_1fr] items-center gap-6">
+            <img class="w-28 h-28 object-cover border-[4px] border-magenta rounded-full" loading="lazy" alt="Mujer concluyendo" src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Sofia%20cuadernO-CIRCULO.png?raw=true">
+            <div class="text-ink text-sm md:text-base leading-relaxed text-justify">
+              <p class="mb-3">El valor p es muy útil para descartar la casualidad, pero no debe utilizarse para comparar estudios entre sí. Un valor p pequeño puede deberse simplemente a una muestra más grande.</p>
+              <p class="font-bold">Para comparar qué intervención tuvo un mayor impacto en la realidad, el valor p por sí solo no proporciona la información necesaria.</p>
+            </div>
+          </div>
+        </section>
+      </div> <!-- Cierra el contenedor de 1050px -->
+
+    </section>
+
+    <!-- SECCIÓN: ¿QUÉ ES EL TAMAÑO DEL EFECTO? (Misión 05) -->
+    <section id="decision-final" data-view="decision-final" class="view-section w-full min-h-screen pt-[104px] pb-0 bg-white" role="tabpanel" aria-hidden="true" aria-labelledby="decision-title">
+      <div class="w-[min(1050px,100%)] mx-auto px-5">
+        
+        <p class="mb-2 text-magenta text-xs font-black tracking-widest uppercase">Punto de partida...</p>
+        <h2 id="decision-title" class="m-0 mb-10 text-ink font-heading font-black text-3xl md:text-5xl leading-tight">¿Qué es el tamaño del efecto?</h2>
+
+        <!-- BLOQUE: SOFÍA Y LO QUE SABEMOS -->
+        <div class="grid grid-cols-1 lg:grid-cols-[280px_1fr] items-start gap-10 max-w-[1050px] mx-auto mb-12">
+          
+          <aside class="flex flex-col items-center mt-4">
+            <div class="relative p-6 border-[3px] border-ink rounded-2xl bg-white text-ink text-sm md:text-[15px] font-bold text-center shadow-sm w-full font-sans">
+              Ahora entiendo que no puedo comparar los estudios únicamente por su valor p. Ambos encontraron evidencia de que la realidad virtual reduce el estrés, pero todavía no sé cuál intervención produjo un cambio mayor.
+              <div class="absolute -bottom-[14px] right-12 w-6 h-6 border-b-[3px] border-r-[3px] border-ink bg-white transform rotate-45"></div>
+            </div>
+            <img class="w-[160px] md:w-[180px] mt-6 object-contain mix-blend-multiply" loading="lazy" alt="Sofía pensando" src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Sofia%20pensando%20azul.png?raw=true">
+          </aside>
+          
+          <div class="pt-2">
+            <h3 class="text-ink font-heading font-black text-2xl md:text-3xl mb-5 uppercase">¿Qué es lo que sabemos hasta ahora?</h3>
+            <p class="text-ink text-sm md:text-base leading-relaxed text-justify mb-5 font-sans">
+              Hasta este momento hemos utilizado el valor p, para responder una pregunta muy específica:<br>
+              <strong class="block mt-2">¿Existe evidencia suficiente para pensar que el efecto observado no se debe únicamente a la variación esperada al trabajar con una muestra?</strong>
+            </p>
+            <p class="text-ink text-sm md:text-base leading-relaxed text-justify mb-8 font-sans">
+              Sin embargo, esa no es la única pregunta que interesa al interpretar una investigación. Una vez que sabemos que el efecto probablemente existe, surge una nueva cuestión:<br>
+              <strong class="block mt-2">¿Qué tan grande es ese efecto?</strong>
+            </p>
+            <div class="flex items-center gap-5 bg-[#f8e6ee] p-5 md:p-6 rounded-r-2xl rounded-l-sm border-l-[8px] border-magenta shadow-sm">
+              <img class="w-12 h-12 md:w-16 md:h-16 object-contain mix-blend-multiply shrink-0" loading="lazy" alt="Icono foco" src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Foco-libreta.png?raw=true">
+              <p class="text-ink text-sm md:text-base font-bold m-0 text-justify font-sans">
+                Sofía necesita una medida que le indique qué tan grande fue realmente el efecto de cada intervención.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- EXPLICACIÓN -->
+        <div class="max-w-[1000px] mx-auto mb-12">
+          <p class="text-ink text-sm md:text-base leading-relaxed text-justify mb-5 font-sans">
+            Esa medida se conoce como <strong>tamaño del efecto (effect size)</strong>. Mientras que el valor p nos ayuda a saber si los datos proporcionan evidencia suficiente para considerar que existe un efecto o una diferencia, el tamaño del efecto nos indica <strong>qué tan grande es esa diferencia o qué tan fuerte es la relación entre las variables.</strong> 
+          </p>
+          <p class="text-ink text-sm md:text-base leading-relaxed text-justify mb-10 font-sans">
+            En otras palabras, el valor p responde a la pregunta <em>"¿Hay evidencia de que existe un efecto?"</em>, mientras que el tamaño del efecto responde <em>"¿Qué tan grande o importante es ese efecto?"</em>.
+          </p>
+        </div>
+
+        <!-- RECUADRO ROJO Y EINSTEIN -->
+        <div class="relative max-w-[1000px] mx-auto mb-16 px-4 md:px-8">
+          <div class="flex flex-col lg:flex-row items-center lg:items-center gap-12 lg:gap-8">
+            <div class="w-full lg:w-[65%] border-[5px] border-[#c97471] rounded-[35px] p-6 md:p-8 bg-white relative z-10 shadow-sm mb-8 lg:mb-0">
+              <h3 class="text-ink font-heading font-black text-2xl md:text-3xl mb-4">Pero... ¿Qué es el Tamaño del efecto?</h3>
+              <p class="text-ink text-[14px] md:text-[15px] leading-relaxed text-justify font-sans m-0 pr-12 md:pr-24 pb-6 md:pb-4">
+                Cohen, definió el tamaño del efecto como <strong>"el grado en que el fenómeno está presente en la población"</strong>. En otras palabras, es una medida estandarizada que cuantifica la magnitud de un fenómeno. Gracias a que es una medida estandarizada, los tamaños del efecto pueden compararse entre diferentes investigaciones, incluso si emplearon muestras o instrumentos distintos.
+              </p>
+              <div class="absolute -bottom-10 -right-6 md:-bottom-12 md:-right-14 z-20 pointer-events-none">
+                <img src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Pizarron-removebg-preview.png?raw=true" alt="Emoji rojo con pizarrón" class="w-[140px] md:w-[170px] h-auto object-contain drop-shadow-md">
+              </div>
+            </div>
+            <div class="w-full lg:w-[35%] flex justify-center lg:justify-end">
+              <button onclick="abrirModal('combinacion')" class="group flex items-center justify-end gap-3 transition-transform hover:scale-105 focus:outline-none">
+                <div class="border-[4px] border-magenta rounded-[20px] rounded-br-sm p-3 md:p-4 bg-white text-left shadow-sm relative">
+                  <span class="text-magenta font-black text-[10px] md:text-[12px] leading-tight tracking-widest font-sans uppercase block">
+                    LA COMBINACIÓN<br>PERFECTA EN<br>INVESTIGACIÓN: HAZ<br>CLIC PARA CONOCERLA
+                  </span>
+                </div>
+                <div class="shrink-0 relative">
+                  <img class="w-20 h-20 md:w-28 md:h-28 object-contain" alt="Emoji Einstein" src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Einstein.png?raw=true">
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SOFÍA INTRO A BOTONES -->
+        <div class="flex flex-col md:flex-row items-center md:items-start gap-6 max-w-[950px] mx-auto mb-10 mt-20">
+          <div class="shrink-0 bg-magenta rounded-full w-[110px] h-[110px] flex items-center justify-center overflow-hidden border-[4px] border-white shadow-md">
+            <img class="w-full h-full object-cover" alt="Sofía indicando" src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Sofia%20cuadernO-CIRCULO.png?raw=true">
+          </div>
+          <div>
+            <p class="text-ink text-sm md:text-base leading-relaxed text-justify mb-4 font-sans">
+              Aunque todas <strong>las medidas de tamaño del efecto comparten el mismo propósito fundamental —cuantificar la magnitud, fuerza o importancia de un fenómeno más allá de la significancia estadística—</strong>, no todas se utilizan para el mismo objetivo. De manera general, las medidas del tamaño del efecto pueden agruparse en dos tipos; el primero es para comparar dos grupos, mientras que el segundo es para entender la asociación entre variables.
+            </p>
+            <p class="text-ink text-sm md:text-base leading-relaxed text-justify font-sans">
+              Selecciona la opción que mejor describa el enfoque del análisis en la investigación para descubrir qué medida del tamaño del efecto le corresponde.
+            </p>
+          </div>
+        </div>
+
+        <!-- TARJETAS CONVERTIDAS EN BOTONES -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16 max-w-[950px] mx-auto">
+          
+          <button onclick="abrirModal('diferencias')" class="bg-white border-[4px] border-[#da7688] rounded-[30px] p-8 shadow-md hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer text-left focus:outline-none">
+            <h4 class="text-[#da7688] font-heading font-black text-xl text-center mb-6 uppercase">Estudios de diferencias</h4>
+            <ul class="text-ink text-sm md:text-base font-medium leading-relaxed font-sans space-y-4">
+              <li class="flex items-start gap-2">
+                <span class="text-ink mt-0.5">→</span>
+                <span>¿Qué tanto disminuyó la ansiedad después de la intervención comparado con el grupo control?</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-ink mt-0.5">→</span>
+                <span>¿Qué tan distantes o diferentes son los grupos entre sí?</span>
+              </li>
+            </ul>
+          </button>
+          
+          <button onclick="abrirModal('asociacion')" class="bg-white border-[4px] border-[#2b4c7e] rounded-[30px] p-8 shadow-md hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer text-left focus:outline-none">
+            <h4 class="text-[#2b4c7e] font-heading font-black text-xl text-center mb-6 uppercase">Estudios de asociación</h4>
+            <ul class="text-ink text-sm md:text-base font-medium leading-relaxed font-sans space-y-4">
+              <li class="flex items-start gap-2">
+                <span class="text-ink mt-0.5">→</span>
+                <span>¿Qué tan relacionada está la ansiedad con la procrastinación?</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-ink mt-0.5">→</span>
+                <span>¿Existen diferencias en el estrés entre estudiantes que reciben una intervención presencial, en línea o híbrida?</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-ink mt-0.5">→</span>
+                <span>¿Qué proporción de la variación del estrés se explica por la modalidad de intervención?</span>
+              </li>
+            </ul>
+          </button>
+
+        </div>
+      </div>
+
+       <!-- NUEVA SECCIÓN: ¿QUÉ PODEMOS CONCLUIR? -->
+        <div class="max-w-[950px] mx-auto mb-16 px-4 lg:px-8">
+          
+          <!-- Fila Superior: Sofía y Texto -->
+          <div class="flex flex-col md:flex-row items-center md:items-start gap-8 mb-12">
+            <!-- Imagen Sofía Círculo Magenta -->
+            <div class="shrink-0 w-[140px] h-[140px] md:w-[160px] md:h-[160px] rounded-full bg-[#c2005d] flex items-center justify-center overflow-hidden border-[4px] border-white shadow-md">
+              <!-- Reemplaza con la URL correcta de tu imagen de Sofía en círculo magenta -->
+              <img src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Sofia%20cuadernO-CIRCULO.png?raw=true" alt="Sofía concluyendo" class="w-full h-full object-cover bg-white">
+            </div>
+            
+            <!-- Texto de Conclusión -->
+            <div class="flex-1">
+              <h3 class="text-ink font-heading font-black text-2xl md:text-3xl mb-4 text-center md:text-left">¿Qué podemos concluir?</h3>
+              <p class="text-ink text-sm md:text-base mb-2 font-sans">Con el tamaño del efecto permite:</p>
+              <ul class="list-disc pl-5 text-ink text-sm md:text-base leading-relaxed font-sans space-y-1">
+                <li>Comparar estudios, ya que es una medida estandarizada.</li>
+                <li>Reemplaza la decisión de "sí/no significativo" por una escala de magnitud (pequeño, medio, grande).</li>
+                <li>Evita la falacia de asumir que "estadísticamente significativo" equivale a "grande" o "importante".</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Fila Inferior: Botón Morado con Foco -->
+          <div class="flex justify-center">
+            <button onclick="abrirModal('conclusion-final')" class="group flex items-center bg-[#4a0033] hover:bg-[#310022] transition-colors rounded-[20px] p-4 md:p-6 shadow-lg max-w-[600px] w-full focus:outline-none">
+              <!-- Reemplaza con la URL correcta de tu imagen del foco -->
+              <img src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Demostracion%20(1).png?raw=true" alt="Foco" class="w-[70px] md:w-[90px] h-auto object-contain mr-6 group-hover:scale-105 transition-transform">
+              <span class="text-white font-black text-lg md:text-xl uppercase tracking-widest text-left font-sans leading-tight">
+                CONECTANDO<br>PUNTOS (Da click para saber más)
+              </span>
+            </button>
+          </div>
+
+        </div> <!-- Cierra nueva sección -->
+
+      <!-- REFERENCIAS -->
+      <div class="w-full bg-magenta py-10 px-5">
+        <div class="max-w-[900px] mx-auto">
+          <h3 class="text-white font-sans font-bold text-lg md:text-xl mb-4">Referencias</h3>
+          <div class="flex flex-col gap-4 text-white/90 text-xs md:text-sm font-medium leading-relaxed text-justify">
+            <p class="pl-8 -indent-8">Cohen, J. (1990). Things I have learned (so far). <i>American Psychologist</i>, <i>45</i>(12), 1304–1312.</p>
+            <p class="pl-8 -indent-8">Dancey, C. P., & Reidy, J. (2017). Hypothesis testing and statistical significance. En <i>Statistics without maths for psychology</i> (7.ª ed., pp. 134–173). Pearson.</p>
+            <p class="pl-8 -indent-8">Dancey, C. P., & Reidy, J. (2017). Issues of significance. En <i>Statistics without maths for psychology</i> (7.ª ed., pp. 246–264). Pearson.</p>
+            <p class="pl-8 -indent-8">Field, A., Miles, J., & Field, Z. (2012). Everything you ever wanted to know about statistics. En <i>Discovering statistics using R</i> (pp. 32–61). SAGE.</p>
+            <p class="pl-8 -indent-8">Galindo-Domínguez, H. (2020). Capítulo II: El contraste de hipótesis y la decisión estadística. En <i>Estadística para no estadísticos: Una guía básica sobre la metodología cuantitativa de trabajos académicos</i> (pp. 33–40). Editorial Área de Innovación y Desarrollo, S.L. <a href="https://doi.org/10.17993/EcoOrgyCso.2020.59" class="underline hover:text-white transition-colors break-all" target="_blank">https://doi.org/10.17993/EcoOrgyCso.2020.59</a></p>
+            <p class="pl-8 -indent-8">Miles, J., & Banyard, P. (2007). Making inferences: Confidence limits and statistical significance. En <i>Understanding and using statistics in psychology: A practical introduction or, how I came to know and love the standard error</i> (pp. 80–105). SAGE Publications.</p>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+<!-- NUEVA SECCIÓN -->
+<section id="aplicacion" data-view="aplicacion" class="view-section w-full min-h-screen pt-[104px] pb-[44px] px-5 bg-white" role="tabpanel" aria-hidden="true" aria-labelledby="aplicacion-title">
+  <div class="w-[min(1050px,100%)] mx-auto">
+    
+    <p class="mb-2 text-magenta text-xs font-black tracking-widest uppercase">Vamos al punto</p>
+    <h2 id="aplicacion-title" class="m-0 mb-10 text-ink font-heading font-black text-3xl md:text-5xl leading-tight">Resolución del caso empírico</h2>
+
+    <!-- A PARTIR DE AQUÍ COMIENZAS A CONSTRUIR TU CONTENIDO -->
+    <p class="text-ink text-sm md:text-base leading-relaxed mb-5 font-sans">
+      Ha llegado el momento de integrar lo aprendido. Sofía está redactando su reporte final para el comité directivo del hospital y necesita tu experiencia metodológica para no cometer errores. 
+          </p>
+          <ul class="text-slate-700 text-sm md:text-[15px] leading-relaxed font-sans space-y-2 relative z-10 list-disc pl-5 m-0">
+            <li>Lee atentamente cada desafío que se presenta en las tarjetas interactivas.</li>
+            <li>Selecciona la opción estadística correcta basándote en la evidencia y el <strong>Tamaño del Efecto</strong>.</li>
+            <li>Si te equivocas, lee la retroalimentación, corrige tu rumbo y vuelve a intentarlo.</li>
+          </ul>
+        </div>
+
+        <!-- CONTENEDOR DEL WIDGET INTERACTIVO -->
+        <div id="quiz-widget" class="bg-white border-4 border-slate-200 rounded-[30px] p-6 md:p-8 shadow-sm relative">
+          
+          <!-- Barra de progreso superior -->
+          <div class="flex items-center justify-between mb-6">
+            <span id="quiz-progress-text" class="text-slate-500 font-bold text-sm uppercase tracking-wider">Pregunta 1 de 5</span>
+            <div class="flex gap-2">
+              <div id="dot-0" class="w-3 h-3 rounded-full bg-magenta"></div>
+              <div id="dot-1" class="w-3 h-3 rounded-full bg-slate-200"></div>
+              <div id="dot-2" class="w-3 h-3 rounded-full bg-slate-200"></div>
+              <div id="dot-3" class="w-3 h-3 rounded-full bg-slate-200 transition-colors"></div>
+              <div id="dot-4" class="w-3 h-3 rounded-full bg-slate-200 transition-colors"></div>
+            </div>
+          </div>
+
+          <!-- Texto de la pregunta -->
+          <h3 id="quiz-question" class="text-ink font-heading font-black text-xl md:text-2xl mb-6 leading-snug">
+            Antes de hacer los cálculos, recordemos un concepto clave: ¿Qué información adicional nos aporta el Tamaño del Efecto que el valor p NO puede decirnos?
+          </h3>
+
+          <!-- Opciones de respuesta -->
+          <div id="quiz-options" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Los botones se inyectan por JavaScript -->
+          </div>
+
+          <!-- Caja de Retroalimentación (Oculta por defecto) -->
+          <div id="quiz-feedback" class="hidden mt-6 p-5 rounded-2xl border-2 flex flex-col items-start gap-4 transition-all">
+            <div class="flex items-center gap-3">
+              <i id="feedback-icon" class="text-3xl"></i>
+              <h4 id="feedback-title" class="font-bold text-lg m-0"></h4>
+            </div>
+            <p id="feedback-text" class="text-sm md:text-base font-medium m-0 leading-relaxed"></p>
+            <button id="quiz-next-btn" class="mt-2 bg-ink hover:bg-magenta text-white font-black text-sm uppercase tracking-wide py-3 px-8 rounded-full transition-colors self-end focus:outline-none">
+              Continuar <i class="ph-bold ph-arrow-right ml-1"></i>
+            </button>
+          </div>
+
+          <!-- Pantalla de Éxito Final (Oculta por defecto) -->
+          <div id="quiz-success" class="hidden flex-col items-center text-center py-6">
+            <img src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/sofia%20celebra.png?raw=true" alt="Sofía celebrando" class="w-48 h-auto mb-6">
+            <h3 class="text-magenta font-heading font-black text-3xl mb-3">¡Misión Cumplida!</h3>
+            <p class="text-ink text-base md:text-lg leading-relaxed font-medium max-w-[500px] mb-6">
+              Gracias a ti, Sofía pudo justificar ante el comité que la <strong>Intervención 2 (App móvil)</strong> es la mejor inversión. Has demostrado que dominas la diferencia entre significancia estadística y tamaño del efecto.
+            </p>
+            <button id="btn-reiniciar-quiz" class="bg-[#4a0033] hover:bg-magenta text-white font-black text-base py-4 px-10 rounded-[20px] shadow-lg transition-transform hover:scale-105 focus:outline-none">
+              Volver a la primera pregunta
+            </button>
+          </div>
+
+        </div> <!-- Fin del Widget -->
+        </div> <!-- Cierra el contenedor de 800px de la sección Aplicación -->
+    </section>
+
+  <!-- SECCIÓN: INTEGRACIÓN -->
+    <section id="integracion" data-view="integracion" class="view-section w-full min-h-screen pt-[104px] pb-16 px-5 bg-white" role="tabpanel" aria-hidden="true" aria-labelledby="integracion-title">
+      <div class="w-[min(900px,100%)] mx-auto">
+        
+        <!-- Encabezado -->
+        <header class="flex items-center gap-4 mb-6">
+          <div class="w-16 h-16 rounded-full bg-[#f8e6ee] flex items-center justify-center shrink-0 shadow-sm border-2 border-magenta">
+            <img src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Sofia%20cuadernO-CIRCULO.png?raw=true" alt="Sofía Integración" class="w-full h-full object-cover rounded-full">
+          </div>
+          <h2 id="integracion-title" class="m-0 text-ink font-heading font-black text-3xl md:text-5xl leading-tight">Integremos los puntos</h2>
+        </header>
+
+        <!-- Instrucciones -->
+        <p class="text-ink text-sm md:text-base leading-relaxed mb-4 font-sans text-justify">
+          Después de acompañar a Sofía en su análisis, ¿cómo le explicarías a un colega la importancia de reportar el <strong>Tamaño del Efecto</strong> junto con el <strong>valor p</strong> para tomar decisiones basadas en evidencia?
+        </p>
+        <p class="text-slate-600 text-[13px] md:text-sm leading-relaxed mb-6 font-sans text-justify">
+          Ingresa tu respuesta en el cuadro de texto. Expresar tus ideas por escrito puede ayudarte a comprender mejor los conceptos y a reflexionar sobre ellos. Tu respuesta será únicamente para tu consulta personal, así que asegúrate de guardarla para revisarla cuando lo necesites.
+        </p>
+
+        <!-- Área de texto y botones -->
+        <div class="mb-10">
+          <textarea id="texto-integracion" class="w-full h-[180px] p-4 rounded-xl border-2 border-magenta/60 focus:border-magenta focus:ring-4 focus:ring-magenta/10 outline-none resize-none font-sans text-ink text-sm md:text-base shadow-inner transition-all" placeholder="Escribe tu reflexión aquí..."></textarea>
+          <div class="text-right mt-1">
+            <span id="contador-caracteres" class="text-slate-400 text-xs font-medium">Caracteres restantes: 1000*</span>
+          </div>
+          
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+            <button id="btn-copiar" class="w-full sm:w-auto flex items-center justify-center gap-2 bg-ink hover:bg-[#1a145e] text-white font-bold text-sm py-3 px-6 rounded-full transition-colors focus:outline-none">
+              <i class="ph-bold ph-copy text-lg"></i> <span id="texto-btn-copiar">Copiar respuesta</span>
+            </button>
+            <button id="btn-evaluar" class="w-full sm:w-auto bg-ink hover:bg-magenta text-white font-bold text-sm py-3 px-8 rounded-full transition-colors focus:outline-none shadow-md">
+              Evalúa tu razonamiento
+            </button>
+          </div>
+        </div>
+        <!-- Sección de Autoevaluación (Oculta por defecto) -->
+        <div id="seccion-evaluacion" class="hidden opacity-0 transition-opacity duration-500">
+          <h3 class="text-ink font-heading font-black text-2xl mb-6">Evalúa tu razonamiento</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Criterio 1: Precisión vs Importancia -->
+            <label class="flex items-start gap-3 cursor-pointer group">
+              <div class="relative flex items-center justify-center w-6 h-6 mt-0.5 shrink-0">
+                <input type="checkbox" class="peer appearance-none w-5 h-5 border-2 border-magenta rounded-md checked:bg-magenta checked:border-magenta transition-colors cursor-pointer">
+                <i class="ph-bold ph-check text-white absolute text-xs opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
+              </div>
+              <div class="text-sm md:text-[15px] text-slate-700 leading-relaxed font-sans">
+                <strong class="text-ink block mb-1">Precisión vs. Importancia.</strong> Mencionaste que el valor p indica si detectamos una diferencia con precisión (significancia estadística), pero el tamaño del efecto es lo que nos dice si esa diferencia es realmente importante en la práctica.
+              </div>
+            </label>
+            
+            <!-- Criterio 2: Error Estándar y Muestra (El reemplazo del "engaño") -->
+            <label class="flex items-start gap-3 cursor-pointer group">
+              <div class="relative flex items-center justify-center w-6 h-6 mt-0.5 shrink-0">
+                <input type="checkbox" class="peer appearance-none w-5 h-5 border-2 border-magenta rounded-md checked:bg-magenta checked:border-magenta transition-colors cursor-pointer">
+                <i class="ph-bold ph-check text-white absolute text-xs opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
+              </div>
+              <div class="text-sm md:text-[15px] text-slate-700 leading-relaxed font-sans">
+                <strong class="text-ink block mb-1">El papel de la muestra y el error estándar.</strong> Explicaste que tener más participantes aporta más información, lo que reduce la incertidumbre (el error estándar) y vuelve a la prueba tan "nítida" que detecta diferencias minúsculas.
+              </div>
+            </label>
+
+            <!-- Criterio 3: Métrica correcta -->
+            <label class="flex items-start gap-3 cursor-pointer group">
+              <div class="relative flex items-center justify-center w-6 h-6 mt-0.5 shrink-0">
+                <input type="checkbox" class="peer appearance-none w-5 h-5 border-2 border-magenta rounded-md checked:bg-magenta checked:border-magenta transition-colors cursor-pointer">
+                <i class="ph-bold ph-check text-white absolute text-xs opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
+              </div>
+              <div class="text-sm md:text-[15px] text-slate-700 leading-relaxed font-sans">
+                <strong class="text-ink block mb-1">Uso de la métrica adecuada.</strong> Identificaste que, para medir objetivamente la magnitud del cambio entre el antes y el después de la intervención, se debe utilizar la d de Cohen.
+              </div>
+            </label>
+
+            <!-- Criterio 4: Impacto clínico -->
+            <label class="flex items-start gap-3 cursor-pointer group">
+              <div class="relative flex items-center justify-center w-6 h-6 mt-0.5 shrink-0">
+                <input type="checkbox" class="peer appearance-none w-5 h-5 border-2 border-magenta rounded-md checked:bg-magenta checked:border-magenta transition-colors cursor-pointer">
+                <i class="ph-bold ph-check text-white absolute text-xs opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
+              </div>
+              <div class="text-sm md:text-[15px] text-slate-700 leading-relaxed font-sans">
+                <strong class="text-ink block mb-1">Impacto en las decisiones.</strong> Argumentaste que apoyarse en el tamaño del efecto ayuda a reducir el error de tomar decisiones, como por ejemplo, implementar intervenciones que son estadísticamente precisas pero clínicamente no tendrían impacto importante en la realidad.
+              </div>
+            </label>
+          </div>
+        </div>
+    
+  </div>
+</section>
+
+  </main>
+
+  <nav class="flex w-full justify-center gap-3 py-3 px-5 border-t border-ink/10 bg-white" aria-label="Controles de vistas">
+    <button data-prev-view type="button" aria-label="Vista anterior" class="min-w-[122px] px-4 py-2.5 border border-ink rounded-full bg-white text-ink font-bold transition-opacity disabled:opacity-40 disabled:cursor-not-allowed">← Anterior</button> 
+    <button data-next-view type="button" aria-label="Vista siguiente" class="min-w-[122px] px-4 py-2.5 border border-magenta rounded-full bg-magenta text-white font-bold transition-opacity disabled:opacity-40 disabled:cursor-not-allowed">Siguiente →</button>
+  </nav>
+
+  <footer class="py-6 px-5 bg-ink text-center">
+    <p class="m-0 text-white/80 text-sm">Unidad III · Fundamentos de inferencia · Decidir también es aprender.</p>
+  </footer>
+
+  <!-- CONTENEDOR GLOBAL DE VENTANAS MODALES -->
+  <div id="modal-container" class="fixed inset-0 z-[100] hidden items-center justify-center bg-ink/80 p-4 transition-opacity backdrop-blur-sm">
+    <div class="bg-white rounded-[24px] p-6 md:p-8 max-w-[750px] w-full max-h-[90vh] overflow-y-auto relative border-[4px] border-ink shadow-2xl">
+      <button onclick="cerrarModal()" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-magenta text-white rounded-full font-bold hover:bg-wine transition-colors focus:outline-none z-50">X</button>
+      
+      <!-- MODAL: Significancia -->
+      <div id="modal-significancia" class="modal-content hidden">
+        <h3 class="font-heading text-2xl text-ink font-black mb-4">Nivel de significancia (α)</h3>
+        <p class="text-ink text-base leading-relaxed">
+          El nivel de significancia (α) es el criterio que se establece para decidir si se rechaza la hipótesis nula. Representa el riesgo máximo de cometer un error al rechazarla cuando en realidad es verdadera. Por lo general, se establece en .05, lo que significa que los investigadores aceptan un 5% de riesgo de cometer este tipo de error. Así, este valor establece un límite para la incertidumbre que están dispuestos a aceptar al tomar una decisión a partir de los datos.
+        </p>
+      </div>
+
+      <!-- MODAL: Combinación Einstein -->
+      <div id="modal-combinacion" class="modal-content hidden">
+        <div class="flex items-center gap-4 mb-6">
+          <img class="w-14 h-14 object-contain" alt="Emoji rosa" src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Einstein.png?raw=true">
+          <h3 class="font-heading text-2xl text-ink font-black uppercase">La combinación perfecta</h3>
+        </div>
+        <p class="text-ink text-base md:text-[1.1rem] leading-relaxed text-justify font-sans">
+          Las principales revistas científicas y organizaciones como la American Psychological Association (APA) recomiendan que los investigadores reporten tanto el valor p como el tamaño del efecto, ya que cada uno aporta información diferente y complementaria. El valor p indica si los datos ofrecen evidencia suficiente para rechazar la hipótesis nula, mientras que el tamaño del efecto permite valorar la magnitud y la relevancia práctica del hallazgos.
+        </p>
+      </div>
+
+      <!-- MODAL: Valor p -->
+      <div id="modal-valor-p" class="modal-content hidden">
+        <h3 class="font-heading text-2xl text-ink font-black mb-4">El valor p</h3>
+        <p class="text-ink text-base leading-relaxed">
+          Indica qué tan probable sería obtener un resultado igual o más extremo que el observado en el estudio, si en realidad no existiera una diferencia o efecto en la población (hipótesis nula). Mientras más pequeño sea el valor p, menos compatibles son los datos observados con la hipótesis nula (H0).
+        </p>
+      </div>
+
+      <!-- MODAL: Error estándar -->
+      <div id="modal-error" class="modal-content hidden">
+        <h3 class="font-heading text-2xl text-ink font-black mb-4">Error estándar</h3>
+        <div class="text-ink text-base leading-relaxed space-y-4 mb-6">
+    <p>Cuando trabajamos con una muestra, utilizamos sus datos para estimar una característica de la población. Por ejemplo, podemos calcular el nivel promedio de ansiedad de una muestra de estudiantes para estimar el promedio de ansiedad de los estudiantes universitarios.</p>
+    <p>Sin embargo, el resultado de una muestra no necesariamente es idéntico al valor de toda la población. Por eso, toda estimación tiene cierto grado de incertidumbre: no podemos saber con total precisión qué tan cerca está nuestro resultado del verdadero valor de la población.</p>
+    <p>El <strong>error estándar</strong> nos ayuda a describir esta incertidumbre. Podemos imaginarlo como la nitidez de una fotografía: un error estándar grande representa una estimación menos precisa, como una fotografía borrosa. Mientras que un error estándar pequeño representa una estimación más precisa, como una fotografía nítida.</p>
+      </div>
+      <img src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/Error-estandar-.png?raw=true" alt="Representación del error estándar" class="w-full h-auto rounded-xl shadow-md border-2 border-ink/10">
+</div>
+
+      <!-- MODAL: Evento poco frecuente -->
+      <div id="modal-evento" class="modal-content hidden">
+        <h3 class="font-heading text-2xl text-ink font-black mb-4">¿Qué tan clara es la diferencia que queremos detectar?</h3>
+        <div class="text-ink text-base leading-relaxed space-y-4 mb-6">
+    <p>El valor p también depende de qué tan clara es la diferencia que queremos detectar. Cuando dos grupos presentan una diferencia clara, puede ser más fácil detectarla incluso con una muestra pequeña.</p>
+    <p>Por ejemplo, imaginemos que queremos comparar la velocidad de carrera entre corredores profesionales y personas que no entrenan regularmente. La diferencia entre ambos grupos podría ser suficientemente clara para detectarse con relativamente pocos participantes.</p>
+    <p>En cambio, si comparamos dos grupos de corredores profesionales, las diferencias en velocidad podrían ser más pequeñas y difíciles de distinguir. En este caso, contar con una muestra mayor puede ayudarnos a detectarlas con mayor precisión.</p>
+    <p class="font-bold bg-magenta/10 p-4 rounded-xl text-magenta border border-magenta/20">La idea clave: cuanto más difícil sea distinguir una diferencia, más información podemos necesitar para detectarla.</p>
+  </div>
+
+  <!-- Imagen 1920x1080 (Se ajustará automáticamente al ancho del modal sin deformarse) -->
+  <img src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/evento-evidente%20(1).png?raw=true" alt="Ejemplo de diferencia clara" class="w-full h-auto rounded-xl shadow-md border-2 border-ink/10 aspect-[16/9] object-cover">
+</div>
+
+      <!-- MODAL: Tamaño de Muestra -->
+      <div id="modal-muestra" class="modal-content hidden">
+        <h3 class="font-heading text-2xl text-ink font-black mb-4">Tamaño de la muestra: ¿Cuánta información tenemos?</h3>
+        <!-- Contenedor Flex: Imagen a la izquierda (en PC) / Arriba (en móvil), Texto a la derecha -->
+  <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+    
+    <!-- Imagen 800x1200 -->
+    <div class="w-full md:w-2/5 shrink-0">
+      <img src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/tama%C3%B1o-muestra.png?raw=true" alt="Tamaño de la muestra" class="w-full h-auto rounded-xl shadow-md border-2 border-ink/10">
+    </div>
+    
+    <!-- Texto a la derecha -->
+    <div class="w-full md:w-3/5 text-ink text-[15px] leading-relaxed space-y-4 font-sans">
+      <p>En la escena anterior, Sofía necesitaba distinguir una diferencia muy pequeña: cuál de los dos corredores llegó primero. Cuando tenemos poca información, puede ser difícil distinguir diferencias pequeñas. Algo similar ocurre cuando trabajamos con una muestra.</p>
+      
+      <p>El <strong>tamaño de la muestra (N)</strong> indica cuántas personas participan en un estudio y, por lo tanto, cuánta información tenemos para estimar lo que ocurre en la población.</p>
+      
+      <div class="bg-gray-50 p-4 md:p-5 rounded-xl border border-gray-200 shadow-sm space-y-3">
+        <p class="m-0">Con una <strong>muestra pequeña</strong>, tenemos menos información para realizar nuestra estimación. Esto suele generar mayor incertidumbre sobre qué tan cerca está nuestro resultado del verdadero valor de la población.</p>
+        <div class="h-px w-full bg-gray-200"></div>
+        <p class="m-0">En cambio, cuando <strong>aumenta el tamaño de la muestra</strong>, contamos con más información. Esto suele hacer que nuestra estimación sea más precisa y reduzca el error estándar. Es como pasar de una imagen en la que cuesta distinguir los detalles a una imagen en la que podemos apreciarlos con mayor claridad.</p>
+      </div>
+      
+      <div class="flex items-start gap-3 mt-4">
+        <svg class="w-6 h-6 text-magenta shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        <p class="font-bold text-magenta m-0">Sin embargo, que una diferencia pueda detectarse con mayor precisión no significa que sea importante en la práctica.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+      <!-- ============================================== -->
+      <!-- NUEVAS MODALES INYECTADAS DEL CÓDIGO ANTERIOR  -->
+      <!-- ============================================== -->
+
+      <!-- MODAL: Diferencias (Familia A) -->
+      <div id="modal-diferencias" class="modal-content hidden w-full fade-in">
+        <div class="flex items-center gap-2.5 mb-4 border-b pb-3">
+            <div class="p-2 bg-blue-100 text-blue-600 rounded-lg"><i class="ph-fill ph-users-three text-xl"></i></div>
+            <div>
+                <h2 class="text-base sm:text-lg font-bold text-slate-800">Diferencia entre Grupos</h2>
+                <p class="text-slate-500 text-xs">Mide la separación de las distribuciones tras una comparación de medias.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
+            <div class="xl:col-span-1 bg-slate-50 rounded-lg p-3.5 border border-slate-200">
+                <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2.5"><i class="ph ph-table"></i> Variables</h3>
+                <div class="space-y-2.5">
+                    <div>
+                        <strong class="text-[11px] text-slate-500 block">Var. Independiente (VI):</strong>
+                        <span class="text-xs bg-white border border-slate-200 px-2 py-1 rounded text-slate-700 block mt-0.5">Categórica dicotómica (ej. Experimental vs. Control).</span>
+                    </div>
+                    <div>
+                        <strong class="text-[11px] text-slate-500 block">Var. Dependiente (VD):</strong>
+                        <span class="text-xs bg-white border border-slate-200 px-2 py-1 rounded text-slate-700 block mt-0.5">Continua (ej. puntaje de ansiedad).</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="xl:col-span-2 bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                <div class="bg-blue-600 text-white p-3">
+                    <h3 class="font-bold text-sm sm:text-base">d de Cohen</h3>
+                    <p class="text-blue-100 text-xs">Ideal para muestras grandes y variabilidades similares.</p>
+                </div>
+                
+                <div class="p-3.5 flex flex-col items-center flex-grow">
+                    <div class="w-full text-center">
+                        <div class="flex items-center justify-between px-1 mb-1">
+                            <span class="text-[11px] text-slate-400">Sin efecto (0.0)</span>
+                            <span class="font-bold text-sm text-blue-700" id="cohen-val">d = 0.80</span>
+                            <span class="text-[11px] text-slate-400">Gran efecto (2.0)</span>
+                        </div>
+                        <input type="range" id="cohen-slider" min="0" max="200" value="80" class="mb-2">
+                        
+                        <div class="curves-container rounded-md border border-slate-200" id="svg-container"></div>
+                        <p class="text-[11px] text-slate-500 text-center mt-2">
+                            <span class="inline-block w-2.5 h-2.5 bg-slate-700 rounded-sm mr-1"></span>Control &nbsp;
+                            <span class="inline-block w-2.5 h-2.5 bg-[#5ccdf1] rounded-sm mr-1"></span>Tratamiento &nbsp;
+                            <span class="inline-block w-2.5 h-2.5 bg-black rounded-sm mr-1"></span>Superposición
+                        </p>
+                    </div>
+                    
+                    <div class="w-full mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-xs mb-1 border-b pb-1">Fórmula</h4>
+                            <div class="my-2 bg-slate-50 py-2 px-3 rounded border border-slate-200 text-center text-blue-700 font-medium text-xs">
+                                $$d = \frac{\bar{X}_1 - \bar{X}_2}{SD_{\mathrm{promedio}}}$$
+                            </div>
+                            <ul class="text-[11px] text-slate-600 space-y-1.5">
+                                <li><strong class="text-slate-800">Numerador:</strong> Diferencia directa entre las medias (qué tan separados están los picos de las curvas).</li>
+                                <li><strong class="text-slate-800">Denominador SD promedio:</strong> Desviación estándar combinada. Sirve como "regla de medir" estandarizada para evaluar si la distancia es realmente importante..</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-xs mb-1 border-b pb-1">Criterios de Interpretación</h4>
+                            <table class="w-full text-xs values-table mt-2">
+                                <thead>
+                                    <tr><th>Tamaño</th><th>Valor de $d$</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Pequeño</td><td>$0.20$</td></tr>
+                                    <tr><td>Mediano</td><td>$0.50$</td></tr>
+                                    <tr><td>Grande</td><td>$0.80$ o más</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2"><i class="ph ph-stack"></i> Otras métricas de esta familia</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="bg-white border border-slate-200 p-3 rounded-lg">
+                <h4 class="font-bold text-slate-800 text-xs mb-0.5">g de Hedges</h4>
+                <p class="text-xs text-slate-600">Recomendada en <strong>muestras pequeñas</strong> para corregir sobreestimaciones de $d$.</p>
+            </div>
+            <div class="bg-white border border-slate-200 p-3 rounded-lg">
+                <h4 class="font-bold text-slate-800 text-xs mb-0.5">$\Delta$ (Delta) de Glass</h4>
+                <p class="text-xs text-slate-600">Usada cuando la varianza del grupo experimental cambia drásticamente.</p>
+            </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Asociacion (Familia B) -->
+      <div id="modal-asociacion" class="modal-content hidden w-full fade-in">
+        <div class="flex items-center gap-2.5 mb-4 border-b pb-3">
+            <div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg"><i class="ph-fill ph-chart-pie-slice text-xl"></i></div>
+            <div>
+                <h2 class="text-base sm:text-lg font-bold text-slate-800">Asociación y Varianza ($\eta^2$)</h2>
+                <p class="text-slate-500 text-xs">Conocer qué proporción de la variabilidad de un fenómeno se atribuye a un factor.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="md:col-span-1 bg-slate-50 rounded-lg p-3.5 border border-slate-200">
+                <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2.5"><i class="ph ph-table"></i> Variables</h3>
+                <div class="space-y-2.5">
+                    <div>
+                        <strong class="text-[11px] text-slate-500 block">En Correlaciones (Tipo $r$):</strong>
+                        <span class="text-xs bg-white border border-slate-200 px-2 py-1 rounded text-slate-700 block mt-0.5">Dos o más variables Continuas.</span>
+                    </div>
+                    <div>
+                        <strong class="text-[11px] text-slate-500 block">En ANOVA:</strong>
+                        <span class="text-xs bg-white border border-slate-200 px-2 py-1 rounded text-slate-700 block mt-0.5">VI Categórica y VD Continua.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="md:col-span-2 bg-white rounded-lg border border-slate-200 overflow-hidden flex flex-col">
+                <div class="bg-emerald-600 text-white p-3">
+                    <h3 class="font-bold text-sm sm:text-base">Eta Cuadrado ($\eta^2$)</h3>
+                    <p class="text-emerald-100 text-xs">Mide el porcentaje ($0\%$ a $100\%$) de varianza explicada por el factor.</p>
+                </div>
+                
+                <div class="p-3.5 flex-grow">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-xs mb-1 border-b pb-1">Fórmula</h4>
+                            <div class="my-2 bg-slate-50 py-2 px-3 rounded border border-slate-200 text-center text-emerald-700 font-medium text-xs">
+                                $$\eta^2 = \frac{SS_{\mathrm{efecto}}}{SS_{\mathrm{total}}}$$
+                            </div>
+                            <ul class="text-[11px] text-slate-600 space-y-1.5">
+                                <li><strong class="text-slate-800">SS efecto:</strong> Cambios atribuibles directamente al factor.</li>
+                                <li><strong class="text-slate-800">SS total:</strong> Variación global.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800 text-xs mb-1 border-b pb-1">Criterios de Interpretación</h4>
+                            <table class="w-full text-xs values-table mt-2">
+                                <thead>
+                                    <tr><th>Tamaño</th><th>Valor de $\eta^2$</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>Pequeño</td><td>$0.01$ $(1\%)$</td></tr>
+                                    <tr><td>Mediano</td><td>$0.06$ $(6\%)$</td></tr>
+                                    <tr><td>Grande</td><td>$0.14$ $(14\%)$ o más</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </div>
+<!-- MODAL: Conclusión Final (Se abre con el botón del foco morado) -->
+      <div id="modal-conclusion-final" class="modal-content hidden">
+        
+        <!-- Encabezado del modal -->
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-2.5 bg-magenta/10 text-magenta rounded-xl">
+            <i class="ph-fill ph-video text-2xl"></i>
+          </div>
+          <h3 class="font-heading text-2xl text-ink font-black m-0">Conectando puntos</h3>
+        </div>
+
+        <p class="text-ink text-sm md:text-[15px] leading-relaxed text-justify font-sans mb-5">
+          Observa el siguiente video demostrativo para integrar cómo se conectan la significancia estadística, el tamaño del efecto y la toma de decisiones clínicas.
+        </p>
+
+        <!-- Contenedor responsivo de YouTube (aspect-ratio 16:9) -->
+        <div class="w-full aspect-video rounded-2xl overflow-hidden shadow-lg border-[3px] border-magenta/30 mb-6 bg-slate-900">
+          <iframe 
+            class="w-full h-full" 
+            src="https://www.youtube.com/embed/Emp0QiLRlHo" 
+            title="Video de demostración - Conectando puntos" 
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            allowfullscreen>
+          </iframe>
+        </div>
+
+        <!-- Pie de modal con Sofía -->
+        <div class="flex items-center gap-4 bg-[#f8e6ee] p-4 rounded-2xl border border-magenta/20">
+          <img src="https://github.com/nayelidelacruz43-art/-tamano-del-efecto/blob/main/sofia%20celebra.png?raw=true" alt="Sofía celebrando" class="w-16 h-16 object-contain shrink-0">
+          <p class="text-xs md:text-sm text-ink font-medium m-0 leading-relaxed">
+            <strong>¡Excelente recorrido!</strong> Ya tienes todas las herramientas conceptuales y empíricas que Sofía necesitaba para el comité del hospital.
+          </p>
+        </div>
+
+  <!-- LOGICA JAVASCRIPT (SPA, MODALES Y SIMULADOR) -->
+  <script>
+    // RUTAS Y NAVEGACIÓN
+    (function () {
+      const views = [...document.querySelectorAll("[data-view]")];
+      const targets = views.map(view => view.dataset.view);
+      const tabs = [...document.querySelectorAll("[role=tab]")];
+      const progressTrack = document.querySelector("[role=progressbar]");
+      const progressFill = document.getElementById("progress-fill");
+      const menuButton = document.getElementById("menu-toggle");
+      const menu = document.getElementById("side-menu");
+      const overlay = document.getElementById("side-overlay");
+      const prev = document.querySelector("[data-prev-view]");
+      const next = document.querySelector("[data-next-view]");
+
+      function setMenu(open) {
+        menu.classList.toggle("is-open", open);
+        overlay.classList.toggle("is-visible", open);
+        menuButton.classList.toggle("is-open", open);
+        menuButton.setAttribute("aria-expanded", String(open));
+        overlay.setAttribute("aria-hidden", String(!open));
+      }
+
+      function showView(viewId) {
+        const index = targets.indexOf(viewId);
+        if (index < 0) return;
+        views.forEach((view, viewIndex) => {
+          const active = viewIndex === index;
+          view.classList.toggle("active", active);
+          view.hidden = !active;
+          view.setAttribute("aria-hidden", String(!active));
+        });
+        const amount = targets.length > 1 ? index * 100 / (targets.length - 1) : 0;
+        progressFill.style.width = amount + "%";
+        progressTrack.setAttribute("aria-valuenow", String(Math.round(amount)));
+        prev.dataset.prevView = targets[index - 1] || "";
+        next.dataset.nextView = targets[index + 1] || "";
+        prev.disabled = index === 0;
+        next.disabled = index === targets.length - 1;
+        setMenu(false);
+        window.scrollTo(0,0);
+      }
+
+      document.addEventListener("click", event => {
+        const control = event.target.closest("[data-view-target], [data-next-view], [data-prev-view]");
+        if (!control || control.disabled) return;
+        event.preventDefault();
+        showView(control.dataset.viewTarget || control.dataset.nextView || control.dataset.prevView);
+      });
+      menuButton.addEventListener("click", () => setMenu(!menu.classList.contains("is-open")));
+      overlay.addEventListener("click", () => setMenu(false));
+      showView("inicio");
+    })();
+
+    // LÓGICA DE VENTANAS MODALES
+    function abrirModal(id) {
+      const contenidos = document.querySelectorAll('.modal-content');
+      contenidos.forEach(c => c.classList.add('hidden'));
+      document.getElementById('modal-' + id).classList.remove('hidden');
+      const contenedor = document.getElementById('modal-container');
+      contenedor.classList.remove('hidden');
+      contenedor.classList.add('flex');
+
+      // Forzar renderizado de fórmulas de MathJax al abrir modal
+      if (window.MathJax && typeof window.MathJax.typesetPromise === 'function') {
+        MathJax.typesetPromise().catch((err) => console.log('MathJax error:', err));
+      }
+
+      // Si es el modal de diferencias, inicializamos el simulador de SVG tras un breve respiro para que tome las dimensiones correctas
+      if (id === 'diferencias') {
+        setTimeout(() => { initCohenInteractive(); }, 50);
+      }
+    }
+
+    function cerrarModal() {
+      const contenedor = document.getElementById('modal-container');
+      contenedor.classList.add('hidden');
+      contenedor.classList.remove('flex');
+    }
+
+    // SIMULADOR 2: D DE COHEN (INYECTADO AL MODAL)
+    let cohenInitialized = false;
+    function initCohenInteractive() {
+      if(cohenInitialized) return; // Evita inicializar dos veces
+      const slider = document.getElementById('cohen-slider');
+      const cohenVal = document.getElementById('cohen-val');
+      const svgContainer = document.getElementById('svg-container');
+      if (!slider || !svgContainer) return;
+
+      const drawCurves = (d) => {
+        const width = svgContainer.clientWidth || 350;
+        const height = 160;
+        const sigma = 1;
+        const mu1 = 0;  
+        
+        const visualD = d * 4.4; 
+        const mu2 = visualD;
+
+        const minX = -3.5; 
+        const maxX = 8.0;
+        const rangeX = maxX - minX;
+        const scaleX = width / rangeX;
+        const scaleY = (height - 25) / 0.45; 
+
+        const pdf = (x, mu) => Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2)) / (sigma * Math.sqrt(2 * Math.PI));
+        const getCoords = (x, y) => `${(x - minX) * scaleX},${height - y * scaleY}`;
+
+        let pathControl = `M ${getCoords(minX, 0)} `;
+        let pathTreat = `M ${getCoords(minX, 0)} `;
+        let pathOverlap = `M ${getCoords(minX, 0)} `;
+
+        for (let x = minX; x <= maxX; x += 0.05) {
+            const y1 = pdf(x, mu1), y2 = pdf(x, mu2);
+            pathControl += `L ${getCoords(x, y1)} `;
+            pathTreat += `L ${getCoords(x, y2)} `;
+            pathOverlap += `L ${getCoords(x, Math.min(y1, y2))} `;
+        }
+        pathControl += `L ${getCoords(maxX, 0)} Z`;
+        pathTreat += `L ${getCoords(maxX, 0)} Z`;
+        pathOverlap += `L ${getCoords(maxX, 0)} Z`;
+
+        const pxMu1 = (mu1 - minX) * scaleX, pxMu2 = (mu2 - minX) * scaleX;
+        const arrowY = height - (0.45 * scaleY); 
+        const distancePx = pxMu2 - pxMu1;
+
+        svgContainer.innerHTML = `
+            <svg width="100%" height="100%" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+                <defs>
+                    <marker id="arrowhead-right" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto"><polygon points="0 0, 5 2.5, 0 5" fill="#1e293b" /></marker>
+                    <marker id="arrowhead-left" markerWidth="5" markerHeight="5" refX="0" refY="2.5" orient="auto"><polygon points="5 0, 0 2.5, 5 5" fill="#1e293b" /></marker>
+                </defs>
+                <path d="${pathControl}" fill="#2e3a4e" stroke="none" />
+                <path d="${pathTreat}" fill="#5ccdf1" fill-opacity="0.85" stroke="none" />
+                <path d="${pathOverlap}" fill="#000000" stroke="none" />
+                <line x1="0" y1="${height-1}" x2="${width}" y2="${height-1}" stroke="#cbd5e1" stroke-width="2" />
+                <line x1="${pxMu1}" y1="20" x2="${pxMu1}" y2="${height}" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="3,3" />
+                <line x1="${pxMu2}" y1="20" x2="${pxMu2}" y2="${height}" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="3,3" />
+                ${distancePx > 18 ? `<line x1="${pxMu1 + 3}" y1="${arrowY}" x2="${pxMu2 - 3}" y2="${arrowY}" stroke="#1e293b" stroke-width="1.5" marker-end="url(#arrowhead-right)" marker-start="url(#arrowhead-left)" />
+                <text x="${(pxMu1 + pxMu2) / 2}" y="${arrowY - 5}" text-anchor="middle" font-size="10" fill="#1e293b" font-weight="bold">Distancia: ${d.toFixed(2)}</text>` : ''}
+                <text x="${pxMu1}" y="15" text-anchor="end" dx="-5" font-size="10" fill="#334155" font-weight="600">Control</text>
+                <text x="${pxMu2}" y="15" text-anchor="start" dx="5" font-size="10" fill="#334155" font-weight="600">Tratamiento</text>
+            </svg>
+        `;
+      };
+
+      const initialD = parseFloat(slider.value) / 100;
+      drawCurves(initialD);
+
+      slider.addEventListener('input', (e) => {
+          const val = (e.target.value / 100); 
+          cohenVal.innerText = `d = ${val.toFixed(2)}`;
+          drawCurves(val);
+      });
+
+      const resizeObserver = new ResizeObserver(() => { drawCurves(slider.value / 100); });
+      resizeObserver.observe(svgContainer);
+      cohenInitialized = true;
+    }
+
+    //Aplicacion 
+    (function initQuiz() {
+      const quizData = [
+        {
+          pregunta: "Antes de hacer los cálculos, recordemos un concepto clave: ¿Qué información adicional nos aporta el Tamaño del Efecto que el valor p NO puede decirnos?",
+          opciones: [
+            { id: "A", texto: "Nos asegura al 100% que la hipótesis nula es falsa y que no hubo errores de muestreo.", correcto: false, feedback: "Incorrecto. Ninguna prueba estadística da certezas absolutas. El valor p lidia con la probabilidad, pero no mide el impacto real." },
+            { id: "B", texto: "Nos indica la magnitud, fuerza o importancia práctica del cambio producido por la intervención.", correcto: true, feedback: "¡Exacto! El valor p solo nos dice 'parece que hay algo aquí', pero el tamaño del efecto nos dice 'qué tan grande e importante es ese algo'." }
+          ]
+        },
+        {
+          pregunta: "Supongamos que el Estudio 2 hubiera evaluado a 10,000 enfermeras, obteniendo un valor p < .001, pero un tamaño del efecto casi nulo. ¿Qué significaría esto?",
+          opciones: [
+            { id: "A", texto: "Que el resultado es estadísticamente significativo debido a que se alteró por recibir mayor información, pudo detectar diferencias minúsculas, pero en la práctica la intervención no generá un cambio importante.", correcto: true, feedback: "¡Perfecto! Has entendido una de las razones, por las que puede modificarse el valor p." },
+            { id: "B", texto: "Que la intervención es un éxito clínico rotundo, ya que un valor p tan pequeño es la meta más importante de cualquier investigación.", correcto: false, feedback: "¡Cuidado! Recuerda que detectar un resultado como estadísticamente significativo no significa que tenga un impacto importante en la realidad." }
+          ]
+        },
+        {
+          pregunta: "Ahora sí, a los cálculos. Sofía necesita medir la magnitud de la diferencia de medias entre los niveles de estrés antes y después de la intervención. ¿Qué medida debe utilizar?",
+          opciones: [
+            { id: "A", texto: "Eta Cuadrado (η²), porque busca entender qué proporción de la varianza del estrés es explicada por la intervención.", correcto: false, feedback: "Revisa tus notas. Eta Cuadrado se utiliza en medidas de asociación y varianza (ej. ANOVAs). Sofía está buscando la diferencia directa entre medias." },
+            { id: "B", texto: "d de Cohen, porque su objetivo es evaluar qué tan separados o diferentes están los puntajes antes y después de la intervención.", correcto: true, feedback: "¡Correcto! La d de Cohen es la métrica ideal, ya que compara qué tanto cambiaron las medias." }
+          ]
+        },
+        {
+          pregunta: "Sofía aplica la fórmula de d de Cohen. En el Estudio 1 obtiene d = 0.43. En el Estudio 2 obtiene d = 0.715. ¿Cómo se interpretan estadísticamente estos resultados?",
+          opciones: [
+            { id: "A", texto: "El Estudio 1 logró un efecto entre pequeño y mediano. El Estudio 2 logró un efecto mediano, muy cercano a grande.", correcto: true, feedback: "¡Excelente interpretación! Basado en los criterios (0.2=Pequeño, 0.5=Mediano, 0.8=Grande), has clasificado correctamente las magnitudes." },
+            { id: "B", texto: "El Estudio 1 es mejor porque 0.43 está más cerca del codiciado valor .05 de significancia estadística.", correcto: false, feedback: "Estás confundiendo peras con manzanas. El tamaño del efecto (d) NO es una probabilidad (p). En la d de Cohen, mientras más grande el número, mayor el impacto." }
+          ]
+        },
+        {
+          pregunta: "Decisión final: Sabiendo que el hospital solo tiene presupuesto para una opción y considerando todo el análisis clínico y estadístico, ¿cuál debe recomendar Sofía?",
+          opciones: [
+            { id: "A", texto: "El Estudio 1 (10 minutos de relajación guiada).", correcto: false, feedback: "Piénsalo bien. Su impacto real (d = 0.43) es mucho menor. Gastar el único presupuesto del hospital en esta opción no aliviaría suficientemente al personal." },
+            { id: "B", texto: "El Estudio 2 (App móvil + ejercicios de relajación).", correcto: true, feedback: "¡Decisión perfecta! Al tener un tamaño del efecto de 0.715, Sofía tiene la evidencia objetiva de que esta intervención generará un alivio del estrés mucho más palpable en el personal médico." }
+          ]
+        }
+      ];
+
+      // Variables que conectan con tu HTML
+      let currentQuestion = 0;
+      
+      const questionEl = document.getElementById("quiz-question");
+      const optionsEl = document.getElementById("quiz-options");
+      const feedbackEl = document.getElementById("quiz-feedback");
+      const feedbackTitle = document.getElementById("feedback-title");
+      const feedbackText = document.getElementById("feedback-text");
+      const feedbackIcon = document.getElementById("feedback-icon");
+      const nextBtn = document.getElementById("quiz-next-btn");
+      const progressText = document.getElementById("quiz-progress-text");
+      const successScreen = document.getElementById("quiz-success");
+
+      // Si no existe el contenedor (por si estás en otra vista), no ejecuta para no causar errores
+      if(!questionEl) return;
+
+      function loadQuestion() {
+        const q = quizData[currentQuestion];
+        questionEl.textContent = q.pregunta;
+        optionsEl.innerHTML = "";
+        feedbackEl.classList.add("hidden");
+        progressText.textContent = `Pregunta ${currentQuestion + 1} de ${quizData.length}`;
+        
+        // Actualizar puntitos de progreso dinámicamente
+        for(let i=0; i < quizData.length; i++) {
+          const dot = document.getElementById(`dot-${i}`);
+          if(dot) {
+            dot.className = i <= currentQuestion ? "w-3 h-3 rounded-full bg-magenta transition-colors" : "w-3 h-3 rounded-full bg-slate-200 transition-colors";
+          }
+        }
+
+        // Crear botones de respuesta
+        q.opciones.forEach((opcion) => {
+          const btn = document.createElement("button");
+          btn.className = "quiz-option-btn w-full text-left bg-white border-2 border-b-[6px] border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-ink font-medium text-sm md:text-base p-4 rounded-2xl transition-all focus:outline-none flex gap-3";
+          btn.innerHTML = `<span class="font-black text-slate-400 mt-[2px]">${opcion.id}.</span> <span>${opcion.texto}</span>`;
+          btn.onclick = () => checkAnswer(opcion, btn);
+          optionsEl.appendChild(btn);
+        });
+      }
+
+      function checkAnswer(opcion, selectedBtn) {
+        // Deshabilitar botones tras responder
+        const allBtns = document.querySelectorAll(".quiz-option-btn");
+        allBtns.forEach(b => {
+          b.disabled = true;
+          b.classList.remove("hover:border-slate-300", "hover:bg-slate-50");
+          b.classList.add("opacity-50", "cursor-not-allowed");
+        });
+
+        // Animación visual al presionar
+        selectedBtn.classList.remove("opacity-50", "border-slate-200");
+        selectedBtn.classList.add("translate-y-[4px]", "border-b-2");
+
+        if (opcion.correcto) {
+          selectedBtn.classList.add("border-green-500", "bg-green-50", "text-green-800");
+          feedbackEl.className = "mt-6 p-5 rounded-2xl border-2 flex flex-col items-start gap-3 transition-all border-green-200 bg-green-50 text-green-900";
+          feedbackIcon.className = "ph-fill ph-check-circle text-3xl text-green-500";
+          feedbackTitle.textContent = "¡Excelente!";
+        } else {
+          selectedBtn.classList.add("border-red-500", "bg-red-50", "text-red-800");
+          feedbackEl.className = "mt-6 p-5 rounded-2xl border-2 flex flex-col items-start gap-3 transition-all border-red-200 bg-red-50 text-red-900";
+          feedbackIcon.className = "ph-fill ph-x-circle text-3xl text-red-500";
+          feedbackTitle.textContent = "Piénsalo de nuevo...";
+        }
+
+        feedbackText.textContent = opcion.feedback;
+        feedbackEl.classList.remove("hidden");
+        
+        // Cambiar texto del botón si es la última pregunta
+        if(opcion.correcto && currentQuestion === quizData.length - 1) {
+          nextBtn.innerHTML = 'Ver resultado final <i class="ph-bold ph-star ml-1"></i>';
+        } else {
+          nextBtn.innerHTML = 'Continuar <i class="ph-bold ph-arrow-right ml-1"></i>';
+        }
+      }
+
+      nextBtn.onclick = () => {
+        const isCorrect = feedbackTitle.textContent === "¡Excelente!";
+        
+        if (!isCorrect) {
+          // Vuelve a cargar la misma pregunta si falló
+          loadQuestion();
+        } else {
+          currentQuestion++;
+          if (currentQuestion < quizData.length) {
+            loadQuestion();
+          } else {
+            // Mostrar pantalla de éxito
+            questionEl.classList.add("hidden");
+            optionsEl.classList.add("hidden");
+            feedbackEl.classList.add("hidden");
+            document.querySelector(".flex.items-center.justify-between.mb-6").classList.add("hidden"); // Ocultar barra de progreso
+            successScreen.classList.remove("hidden");
+            successScreen.classList.add("flex");
+          }
+        }
+      };
+
+      // Iniciar primera pregunta
+      loadQuestion();
+    })();
+    // Lógica para el botón de reiniciar el cuestionario
+      const restartBtn = document.getElementById("btn-reiniciar-quiz");
+      if (restartBtn) {
+        restartBtn.onclick = () => {
+          // 1. Reiniciar el contador a la pregunta 0
+          currentQuestion = 0;
+          
+          // 2. Ocultar la pantalla de éxito
+          successScreen.classList.add("hidden");
+          successScreen.classList.remove("flex");
+          
+          // 3. Volver a mostrar los elementos del cuestionario
+          questionEl.classList.remove("hidden");
+          optionsEl.classList.remove("hidden");
+          document.querySelector(".flex.items-center.justify-between.mb-6").classList.remove("hidden"); // Muestra la barra de progreso
+          
+          // 4. Cargar la primera pregunta
+          loadQuestion();
+        };
+      }
+
+      // === LÓGICA DE LA SECCIÓN DE INTEGRACIÓN ===
+    (function initIntegracion() {
+      const textarea = document.getElementById("texto-integracion");
+      const contador = document.getElementById("contador-caracteres");
+      const btnCopiar = document.getElementById("btn-copiar");
+      const textoBtnCopiar = document.getElementById("texto-btn-copiar");
+      const btnEvaluar = document.getElementById("btn-evaluar");
+      const seccionEvaluacion = document.getElementById("seccion-evaluacion");
+      
+      const maxCaracteres = 1000;
+
+      if(!textarea) return; // Previene errores si no se encuentra el elemento
+
+      // Contador de caracteres dinámico
+      textarea.addEventListener("input", function() {
+        const restantes = maxCaracteres - this.value.length;
+        // Limitar texto si se pasa (fallback por si no funciona el atributo HTML)
+        if (restantes < 0) {
+          this.value = this.value.substring(0, maxCaracteres);
+          contador.textContent = "Caracteres restantes: 0*";
+        } else {
+          contador.textContent = `Caracteres restantes: ${restantes}*`;
+        }
+      });
+
+      // Botón de Copiar al portapapeles
+      btnCopiar.addEventListener("click", function() {
+        if(textarea.value.trim() === "") return; // No copiar si está vacío
+        
+        navigator.clipboard.writeText(textarea.value).then(() => {
+          const originalText = textoBtnCopiar.textContent;
+          const icon = this.querySelector('i');
+          
+          textoBtnCopiar.textContent = "¡Copiado!";
+          icon.classList.replace("ph-copy", "ph-check");
+          this.classList.replace("bg-ink", "bg-green-600");
+          this.classList.replace("hover:bg-[#1a145e]", "hover:bg-green-700");
+          
+          // Restaurar botón después de 2 segundos
+          setTimeout(() => {
+            textoBtnCopiar.textContent = originalText;
+            icon.classList.replace("ph-check", "ph-copy");
+            this.classList.replace("bg-green-600", "bg-ink");
+            this.classList.replace("hover:bg-green-700", "hover:bg-[#1a145e]");
+          }, 2000);
+        }).catch(err => {
+          console.error('Error al copiar: ', err);
+        });
+      });
+
+      // Botón para mostrar la evaluación
+      btnEvaluar.addEventListener("click", function() {
+        seccionEvaluacion.classList.remove("hidden");
+        // Pequeño timeout para permitir que el navegador registre el display:block antes de transicionar la opacidad
+        setTimeout(() => {
+          seccionEvaluacion.classList.remove("opacity-0");
+        }, 50);
+        
+        // Deslizar suavemente la pantalla hacia la evaluación
+        setTimeout(() => {
+          seccionEvaluacion.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+      });
+    })();
+
+  </script>
+</body>
+</html>
